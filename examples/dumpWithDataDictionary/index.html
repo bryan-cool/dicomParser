@@ -215,6 +215,9 @@ function mapUid(str) {
     return '';
 }
 
+function escapeSpecialCharacters(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
 function dataDownloadLink(element, text) {
     var linkText = "<a class='dataDownload' href='#' data-tag='" + element.tag + "'";
@@ -554,7 +557,7 @@ function dumpDataSet(dataSet, output)
                             // data.  Note that the length of the element will be 0 to indicate "no data"
                             // so we don't put anything here for the value in that case.
                             if (str !== undefined) {
-                                text += '"' + str + '"' + mapUid(str);
+                                text += '"' + escapeSpecialCharacters(str) + '"' + mapUid(str);
                             }
                         }
                         else {
@@ -596,7 +599,7 @@ function dumpDataSet(dataSet, output)
                                 // data.  Note that the length of the element will be 0 to indicate "no data"
                                 // so we don't put anything here for the value in that case.
                                 if (str !== undefined) {
-                                    text += '"' + str + '"' + mapUid(str);
+                                    text += '"' + escapeSpecialCharacters(str) + '"' + mapUid(str);
                                 }
                             }
                             else {
