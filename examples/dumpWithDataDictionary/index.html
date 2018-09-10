@@ -191,6 +191,96 @@ function dataDownloadLink(element, text) {
     return linkText;
 }
 
+function isBigEndian(firstByte, secondByte) {
+  // Assumption: first element has a group number of 0x0008
+  if (firstByte === 0x00 && (secondByte === 0x08 || secondByte === 0x02)) {
+    return true;
+  } else if ((firstByte === 0x08 || firstByte === 0x02) && secondByte === 0x00) {
+    return false;
+  }
+  throw new Error('When guessing endianness, a group number other than 0x0002 or 0x0008 was encountered. Cannot determine whether this is a DICOM file.');
+}
+
+function isUpper(byte) {
+  const str = String.fromCharCode(byte);
+  // True if uppercase, false if not uppercase (including numeric, punctuation, etc.)
+  return str.toUpperCase() === str && str.toLowerCase() !== str;
+}
+
+function isExplicit(byteArray) {
+  return isUpper(byteArray[4]) && isUpper(byteArray[5]);
+}
+
+function isExplicitTransferSyntax(transferSyntax = '') {
+  // Per the DICOM standard, anything not Implicit Little Endian is explicit
+  const implicitLittleEndian = '1.2.840.10008.1.2';
+  const cleanedTransferSyntax = transferSyntax.replace(/\0/g, '');
+  return Ember.isPresent(cleanedTransferSyntax) && cleanedTransferSyntax !== implicitLittleEndian;
+}
+
+function isLittleEndian(dataSet) {
+  return (dataSet.byteArrayParser === dicomParser.littleEndianByteArrayParser);
+}
+
+function determineTransferSyntax(byteArray) {
+  if (byteArray.length < 6) {
+    throw new Error('Not enough bytes available to guess transfer syntax.');
+  }
+
+  if (isBigEndian(byteArray[0], byteArray[1])) {
+    return '1.2.840.10008.1.2.2';
+  }
+  return isExplicit(byteArray) ? '1.2.840.10008.1.2.1' : '1.2.840.10008.1.2';
+}
+
+function getDataSetByteStream(transferSyntax, byteArray, position) {
+  if (transferSyntax === '1.2.840.10008.1.2.2') {
+    return new dicomParser.ByteStream(dicomParser.bigEndianByteArrayParser, byteArray, position);
+  }
+  return new dicomParser.ByteStream(dicomParser.littleEndianByteArrayParser, byteArray, position);
+}
+
+// Alternate version of the one found in dicomParser
+function readDataSet(byteArray, options) {
+  const transferSyntax = determineTransferSyntax(byteArray);
+  const dataSetByteStream = getDataSetByteStream(transferSyntax, byteArray, 0);
+
+  const dataSet = new dicomParser.DataSet(dataSetByteStream.byteArrayParser, dataSetByteStream.byteArray, {});
+  dataSet.warnings = dataSetByteStream.warnings;
+  dataSet.isExplicit = isExplicit(byteArray);
+  dataSet.isLittleEndian = isLittleEndian(dataSet);
+
+  try {
+    if (dataSet.isExplicit) {
+      dicomParser.parseDicomDataSetExplicit(dataSet, dataSetByteStream, dataSetByteStream.byteArray.length, options);
+    } else {
+      dicomParser.parseDicomDataSetImplicit(dataSet, dataSetByteStream, dataSetByteStream.byteArray.length, options);
+    }
+  } catch (e) {
+    throw {
+      exception: e,
+      dataSet: dataSet
+    };
+  }
+  return dataSet;
+}
+
+function robustDicomParse(byteArray, options) {
+  try {
+    const dataSet = dicomParser.parseDicom(byteArray, options);
+    dataSet.isExplicit = isExplicit(byteArray);
+    dataSet.isLittleEndian = isLittleEndian(dataSet);
+    return dataSet;
+  } catch (error) {
+    // If file is less than the prefix length (132 bytes) then we'll get a string as error that doesn't have 'DICM prefix' in it
+    if (error.toString().indexOf('DICM prefix') > -1 || (error.message && error.message.indexOf('DICM prefix') > -1)) {
+      // Missing header; try some logic to detect a DICOM file
+      return readDataSet(byteArray, options);
+    }
+    throw error;
+  }
+}
+
 
 // This function iterates through dataSet recursively and adds new HTML strings
 // to the output array passed into it
@@ -633,7 +723,7 @@ function dumpFile()
                     untilTag: untilTag
                 };
 
-                dataSet = dicomParser.parseDicom(byteArray, options);
+                dataSet = robustDicomParse(byteArray, options);
                 // dump dataSet to console to aid debugging.
                 if(console) {
                     console.log(dataSet);
