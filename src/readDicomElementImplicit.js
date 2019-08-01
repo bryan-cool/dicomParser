@@ -1,6 +1,8 @@
 import findItemDelimitationItemAndSetElementLength from './findItemDelimitationItem.js';
+import { isPrivateTag } from './util/util.js';
 import readSequenceItemsImplicit from './readSequenceElementImplicit.js';
 import readTag from './readTag.js';
+
 
 /**
  * Internal helper functions for for parsing DICOM elements
@@ -13,6 +15,13 @@ const isSequence = (element, byteStream, vrCallback) => {
     if (callbackValue !== undefined) {
       return (callbackValue === 'SQ');
     }
+  }
+
+  // Private tags in an implicit file are UN (see 6.2.2 in DICOM standard).
+  // Don't peek them if no callback was defined; otherwise we might accidentally try
+  // to parse them (we can't make any assumptions about their contents).
+  if (isPrivateTag(element.tag)) {
+    return false;
   }
 
   if ((byteStream.position + 4) <= byteStream.byteArray.length) {

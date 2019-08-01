@@ -279,4 +279,51 @@ describe('readDicomElementImplicit', () => {
     expect(element.length).to.equal(8);
   });
 
+  it('private tags are not peeked with no callback', () => {
+    // Arrange
+    // (7fe1,0010)                               8
+    const bytes = [0xe1, 0x7f, 0x10, 0x00, 0x08, 0x00, 0x00, 0x00,
+      // Looks like an item tag, but isn't since it's within pixel data
+      0xfe, 0xff, 0x00, 0xe0, 0x0A, 0x00, 0x00, 0x00,
+    ];
+
+    const byteStream = new ByteStream(littleEndianByteArrayParser, convertToByteArray(bytes));
+
+    // Act
+    const element = readDicomElementImplicit(byteStream);
+
+    // Assert
+    expect(element.tag).to.equal('x7fe10010');
+    expect(element.items).to.equal(undefined);
+    expect(element.length).to.equal(8);
+  });
+
+  it('private SQ successfully parsed with callback that returns SQ', () => {
+    // Arrange
+    // (0009,0006)                              18
+    const bytes = [0x09, 0x00, 0x06, 0x00, 0x12, 0x00, 0x00, 0x00,
+      // (fffe,e000)                              10
+      0xfe, 0xff, 0x00, 0xe0, 0x0A, 0x00, 0x00, 0x00,
+      // (0008,0100)                               2   'A'
+      0x08, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x41, 0x20,
+    ];
+    const byteStream = new ByteStream(littleEndianByteArrayParser, convertToByteArray(bytes));
+    const callback = (tag) => {
+      return 'SQ';
+    };
+
+    // Act
+    const element = readDicomElementImplicit(byteStream, undefined, callback);
+
+    // Assert
+    const itemStart = element.items[0];
+    const codeValue = itemStart.dataSet.elements['x00080100'];
+
+    expect(element.items.length).to.equal(1);
+    expect(itemStart.tag).to.equal('xfffee000');
+    expect(codeValue).to.be.ok;
+    expect(codeValue.length).to.equal(2);
+    expect(codeValue.dataOffset).to.equal(24);
+  });
+
 });
