@@ -10,8 +10,15 @@ import readTag from './readTag.js';
 
 const isSequence = (element, byteStream, vrCallback) => {
   // if a data dictionary callback was provided, use that to verify that the element is a sequence.
-  if (typeof vrCallback !== 'undefined') {
-    return (vrCallback(element.tag) === 'SQ');
+  if (vrCallback !== undefined) {
+    const callbackValue = vrCallback(element.tag);
+    if (callbackValue !== undefined) {
+      return (callbackValue === 'SQ');
+    }
+  }
+
+  if (element.hadUndefinedLength) {
+    return true;
   }
 
   // Private tags in an implicit file are UN (see 6.2.2 in DICOM standard).
