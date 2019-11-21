@@ -14,6 +14,41 @@
             overflow: auto;
         }
 
+        /* Remove margins and padding from the parent ul */
+        #myUL {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Style the arrow */
+        .arrow {
+            cursor: pointer;
+            user-select: none; /* Prevent text selection */
+        }
+
+        /* Create the arrow with a unicode character, and style it */
+        .arrow::before {
+            content: "\25B6";
+            color: black;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        /* Rotate the arrow icon when clicked on (using JavaScript) */
+        .arrow-down::before {
+            transform: rotate(90deg);
+        }
+
+        /* Hide the nested list */
+        .nested {
+            display: none;
+        }
+
+        /* Show the nested list when the user clicks on the arrow (with JavaScript) */
+        .active {
+            display: block;
+        }
+
 
     </style>
 
@@ -396,14 +431,14 @@ function dumpDataSet(dataSet, output)
             // element object for elements that don't have SQ VR type.  Note that implicit little endian
             // sequences will are currently not parsed.
             if (element.items) {
-                output.push('<li>' + text + '</li>');
-                output.push('<ul>');
+                output.push('<li><span class="arrow arrow-down">' + text + '</span>');
+                output.push('<ul class="nested active">');
 
                 // each item contains its own data set so we iterate over the items
                 // and recursively call this function
                 var itemNumber = 0;
                 element.items.forEach(function (item) {
-                    output.push('<li>Item #' + itemNumber++ + ' ' + item.tag);
+                    output.push('<li><span class="arrow arrow-down">Item #' + itemNumber++ + ' ' + item.tag);
                     var lengthText = " length=" + item.length;
                     if (item.hadUndefinedLength) {
                         lengthText += " (-1)";
@@ -413,12 +448,14 @@ function dumpDataSet(dataSet, output)
                         text += lengthText + "; ";
                         output.push(lengthText);
                     }
-                    output.push('</li>');
-                    output.push('<ul>');
+                    output.push('</span>');
+                    output.push('<ul class="nested active">');
                     dumpDataSet(item.dataSet, output);
                     output.push('</ul>');
+                    output.push('</li>');
                 });
                 output.push('</ul>');
+                output.push('</li>');
             }
             else if (element.fragments) {
                 text += "encapsulated pixel data with " + element.basicOffsetTable.length + " offsets and " +
@@ -731,6 +768,15 @@ function dumpFile()
                 dumpDataSet(dataSet, output);
                 // Combine the array of strings into one string and add it to the DOM
                 document.getElementById('dropZone').innerHTML = '<ul>' + output.join('') + '</ul>';
+
+                var toggler = document.getElementsByClassName("arrow");
+
+                for (var i = 0; i < toggler.length; i++) {
+                    toggler[i].addEventListener("click", function() {
+                        this.parentElement.querySelector(".nested").classList.toggle("active");
+                        this.classList.toggle("arrow-down");
+                    });
+                }
 
                 function downloadData(data, fileName) {
                     var blob = new Blob([data], {type: 'application/octet-stream'});
