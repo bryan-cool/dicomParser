@@ -22,9 +22,14 @@
         }
 
         /* Style the arrow */
+        .arrow-bullet {
+            list-style-type: none;
+        }
+
+
+        /* Style the arrow */
         .arrow {
             cursor: pointer;
-            user-select: none; /* Prevent text selection */
         }
 
         /* Create the arrow with a unicode character, and style it */
@@ -33,6 +38,7 @@
             color: black;
             display: inline-block;
             margin-right: 6px;
+            margin-left: -1.3em;
         }
 
         /* Rotate the arrow icon when clicked on (using JavaScript) */
@@ -118,6 +124,9 @@
                     <input id="sha1" type="checkbox"> SHA1
                 </label>
             </div>
+            <div class="checkbox">
+                <button id="toggle-all" type="button" onclick="toggleAll()"> Toggle all</button>
+            </div>
 
         </form>
         <div id="status" class="alert alert-success">
@@ -186,6 +195,7 @@ var showSHA1 = false;
 var file = undefined;
 var sha1Hash = "";
 var rusha = new Rusha();
+var toggleClosed = true;
 
 // helper function to see if a string only has ascii characters in it
 function isASCII(str) {
@@ -205,6 +215,16 @@ function sha1Text(byteArray, position, length) {
     }
     var text = "; SHA1 " + sha1(byteArray, position, length);
     return text;
+}
+
+function toggleAll() {
+    var arrows = document.getElementsByClassName("arrow");
+
+    for (var i = 0; i < arrows.length; i++) {
+        toggleArrow(arrows[i], !toggleClosed);
+    }
+
+    toggleClosed = !toggleClosed;
 }
 
 function mapUid(str) {
@@ -315,6 +335,11 @@ function robustDicomParse(byteArray, options) {
     }
     throw error;
   }
+}
+
+function toggleArrow(element, forceValue) {
+    element.parentElement.querySelector(".nested").classList.toggle("active", forceValue);
+    element.classList.toggle("arrow-down", forceValue);
 }
 
 
@@ -435,14 +460,14 @@ function dumpDataSet(dataSet, output)
             // element object for elements that don't have SQ VR type.  Note that implicit little endian
             // sequences will are currently not parsed.
             if (element.items) {
-                output.push('<li><span class="arrow arrow-down">' + text + '</span>');
+                output.push('<li class="arrow-bullet"><span class="arrow arrow-down">' + text + '</span>');
                 output.push('<ul class="nested active">');
 
                 // each item contains its own data set so we iterate over the items
                 // and recursively call this function
                 var itemNumber = 0;
                 element.items.forEach(function (item) {
-                    output.push('<li><span class="arrow arrow-down">Item #' + itemNumber++ + ' ' + item.tag);
+                    output.push('<li class="arrow-bullet"><span class="arrow arrow-down">Item #' + itemNumber++ + ' ' + item.tag);
                     var lengthText = " length=" + item.length;
                     if (item.hadUndefinedLength) {
                         lengthText += " (-1)";
@@ -647,14 +672,13 @@ function dumpDataSet(dataSet, output)
                             }
                         }
                         else if (vr === 'OB' || vr === 'OW' || vr === 'UN' || vr === 'OF' || vr === 'UT') {
-                            color = '#C8C8C8';
                             // If it is some other length and we have no string
                             if(element.length === 2) {
-                                text += "<i>" + dataDownloadLink(element, "binary data") + " of length " + element.length + " as uint16: " +dataSet.uint16(propertyName) + "</i>";
+                                text += '<i style="color: #C8C8C8">' + dataDownloadLink(element, "binary data") + " of length " + element.length + " as uint16: " +dataSet.uint16(propertyName) + "</i>";
                             } else if(element.length === 4) {
-                                text += "<i>" + dataDownloadLink(element, "binary data") + " of length " + element.length + " as uint32: " +dataSet.uint32(propertyName) + "</i>";
+                                text += '<i style="color: #C8C8C8">' + dataDownloadLink(element, "binary data") + " of length " + element.length + " as uint32: " +dataSet.uint32(propertyName) + "</i>";
                             } else {
-                                text += "<i>" + dataDownloadLink(element, "binary data") + " of length " + element.length + " and VR " + vr + "</i>";
+                                text += '<i style="color: #C8C8C8">' + dataDownloadLink(element, "binary data") + " of length " + element.length + " and VR " + vr + "</i>";
                             }
                         }
                         else if(vr === 'AT') {
@@ -677,10 +701,8 @@ function dumpDataSet(dataSet, output)
                     }
                 }
                 else {
-                    color = '#C8C8C8';
-
                     // Add text saying the data is too long to show...
-                    text += "<i>" + dataDownloadLink(element, "data");
+                    text += '<i style="color: #C8C8C8">' + dataDownloadLink(element, "data");
                     text += " of length " + element.length + " for VR " + vr + " too long to show</i>";
                     text += sha1Text(dataSet.byteArray, element.dataOffset, element.length);
                 }
@@ -777,8 +799,7 @@ function dumpFile()
 
                 for (var i = 0; i < toggler.length; i++) {
                     toggler[i].addEventListener("click", function() {
-                        this.parentElement.querySelector(".nested").classList.toggle("active");
-                        this.classList.toggle("arrow-down");
+                        toggleArrow(this);
                     });
                 }
 
