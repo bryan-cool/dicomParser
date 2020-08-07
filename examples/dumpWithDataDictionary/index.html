@@ -395,29 +395,6 @@ function dumpDataSet(dataSet, output)
                 text += element.tag;
                 text += " : ";
 
-                var lengthText = "length=" + element.length;
-                if (element.hadUndefinedLength) {
-                    lengthText += " (-1)";
-                }
-                if(showLength === true) {
-                    text += lengthText + "; ";
-                }
-
-                title += lengthText;
-
-                var vrText = "";
-                if (element.vr) {
-                    vrText += "VR=" + element.vr;
-                }
-
-                if(showVR) {
-                    text += vrText + "; ";
-                }
-                if(vrText) {
-                    title += "; " + vrText;
-                }
-
-                title += "; dataOffset=" + element.dataOffset;
                 // make text lighter since this is an unknown attribute
                 color = '#C8C8C8';
             }
@@ -429,38 +406,38 @@ function dumpDataSet(dataSet, output)
                 text += " : ";
 
                 title += "(" + element.tag + ")";
-
-                var lengthText = " length=" + element.length;
-                if (element.hadUndefinedLength) {
-                    lengthText += " (-1)";
-                }
-
-                if(showLength === true) {
-                    text += lengthText + "; ";
-                }
-                title += "; " + lengthText;
-
-                var vrText = "";
-                if (element.vr) {
-                    vrText += "VR=" + element.vr;
-                }
-
-                if(showVR) {
-                    text += vrText + "; ";
-                }
-                if(vrText) {
-                    title +="; " + vrText;
-                }
-
-                title += "; dataOffset=" + element.dataOffset;
-
             }
+
+            var lengthText = " length=" + element.length;
+            if (element.hadUndefinedLength) {
+                lengthText += " (-1)";
+            }
+
+            if(showLength === true) {
+                text += lengthText + "; ";
+            }
+            title += "; " + lengthText;
+
+            var vrText = "";
+            var vr = element.vr || (tag && tag.vr);
+            if (vr) {
+                vrText += "VR=" + vr;
+            }
+
+            if(showVR) {
+                text += vrText + "; ";
+            }
+            if(vrText) {
+                title +="; " + vrText;
+            }
+
+            title += "; dataOffset=" + element.dataOffset;
 
             // Here we check for Sequence items and iterate over them if present.  items will not be set in the
             // element object for elements that don't have SQ VR type.  Note that implicit little endian
             // sequences will are currently not parsed.
             if (element.items) {
-                output.push('<li class="arrow-bullet"><span class="arrow arrow-down">' + text + '</span>');
+                output.push('<li class="arrow-bullet"><span class="arrow arrow-down" title="' + title + '">' + text + '</span>');
                 output.push('<ul class="nested active">');
 
                 // each item contains its own data set so we iterate over the items
@@ -587,9 +564,8 @@ function dumpDataSet(dataSet, output)
                         }
                         else {
                             if (element.length !== 2 && element.length !== 4) {
-                                color = '#C8C8C8';
                                 // If it is some other length and we have no string
-                                text += "<i>binary data</i>";
+                                text += '<i style="color: #C8C8C8">binary data</i>';
                             }
                         }
                     }
@@ -599,13 +575,18 @@ function dumpDataSet(dataSet, output)
                                     || vr === 'FL'
                                     || vr === 'FD'
                                     || vr === 'OB'
+                                    || vr === 'OD'
                                     || vr === 'OF'
+                                    || vr === 'OL'
+                                    || vr === 'OV'
                                     || vr === 'OW'
-                                    || vr === 'SI'
+                                    || vr === 'SL'
                                     || vr === 'SQ'
                                     || vr === 'SS'
+                                    || vr === 'SV'
                                     || vr === 'UL'
                                     || vr === 'US'
+                                    || vr === 'UV'
                             ) {
                                 return false;
                             }
@@ -629,9 +610,8 @@ function dumpDataSet(dataSet, output)
                             }
                             else {
                                 if (element.length !== 2 && element.length !== 4) {
-                                    color = '#C8C8C8';
                                     // If it is some other length and we have no string
-                                    text += "<i>binary data</i>";
+                                    text += '<i style="color: #C8C8C8">binary data</i>';
                                 }
                             }
                         }
@@ -671,7 +651,7 @@ function dumpDataSet(dataSet, output)
                                 text += '\\' + dataSet.float(propertyName, i);
                             }
                         }
-                        else if (vr === 'OB' || vr === 'OW' || vr === 'UN' || vr === 'OF' || vr === 'UT') {
+                        else if (vr === 'OB' || vr === 'OD' || vr === 'OL' || vr === 'OV' || vr === 'OW' || vr === 'UN' || vr === 'OF' || vr === 'UT') {
                             // If it is some other length and we have no string
                             if(element.length === 2) {
                                 text += '<i style="color: #C8C8C8">' + dataDownloadLink(element, "binary data") + " of length " + element.length + " as uint16: " +dataSet.uint16(propertyName) + "</i>";
