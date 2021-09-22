@@ -201,4 +201,97 @@ describe('readDicomElementImplicit', () => {
     expect(element.length).to.equal(11);
   });
 
+  // Explicit VR (implicit/explicit length): parse
+  // Implicit VR, implicit length: parse and throw away?
+  // Implicit VR, explicit length: skip
+
+  it('private sequence with implicit length is correctly skipped', () => {
+    // Arrange
+    // (0009,0006)               (undefined length)
+    const bytes = [0x09, 0x00, 0x06, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
+      // (fffe,e000)                        length: 10
+      0xfe, 0xff, 0x00, 0xe0, 0x0a, 0x00, 0x00, 0x00,
+      // (0008,0018)                      length: 2   'B'
+      0x08, 0x00, 0x18, 0x00, 0x02, 0x00, 0x00, 0x00, 0x42, 0x20,
+      // (fffe,e0dd)                               0
+      0xfe, 0xff, 0xdd, 0xe0, 0x00, 0x00, 0x00, 0x00,
+      // (0008,0100)                               2   'A'
+      0x08, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x41, 0x20,
+    ];
+
+    const byteStream = new ByteStream(littleEndianByteArrayParser, convertToByteArray(bytes));
+
+    // Act
+    const element = readDicomElementImplicit(byteStream);
+
+    // Assert
+    expect(element.tag).to.equal('x00090006');
+    expect(element.items).to.equal(undefined);
+    expect(element.length).to.equal(18);
+
+    // Read the next element
+    const nextElement = readDicomElementImplicit(byteStream);
+    expect(nextElement.tag).to.equal('x00080100');
+  });
+
+  it('private sequence with explicit length is correctly skipped', () => {
+    // Arrange
+    // (0009,0006)                       length: 18
+    const bytes = [0x09, 0x00, 0x06, 0x00, 0x12, 0x00, 0x00, 0x00,
+      // (fffe,e000)                     length: 10
+      0xfe, 0xff, 0x00, 0xe0, 0x0a, 0x00, 0x00, 0x00,
+      // (0008,0018)                      length: 2   'B'
+      0x08, 0x00, 0x18, 0x00, 0x02, 0x00, 0x00, 0x00, 0x42, 0x20,
+      // (0008,0100)                      length: 2   'A'
+      0x08, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x41, 0x20,
+    ];
+
+    const byteStream = new ByteStream(littleEndianByteArrayParser, convertToByteArray(bytes));
+
+    // Act
+    const element = readDicomElementImplicit(byteStream);
+
+    // Assert
+    expect(element.tag).to.equal('x00090006');
+    expect(element.items).to.equal(undefined);
+    expect(element.length).to.equal(18);
+
+    // Read the next element
+    const nextElement = readDicomElementImplicit(byteStream);
+    expect(nextElement.tag).to.equal('x00080100');
+    expect(nextElement.length).to.equal(2);
+  });
+
+  it('private sequence with implicit length is parsed when VR is given explicitly via callback', () => {
+    // Arrange
+    // (0009,0006)                       length: undefined
+    const bytes = [0x09, 0x00, 0x06, 0x00, 0xff, 0xff, 0xff, 0xff,
+      // (fffe,e000)                     length: 10
+      0xfe, 0xff, 0x00, 0xe0, 0x0a, 0x00, 0x00, 0x00,
+      // (0008,0018)                      length: 2   'B'
+      0x08, 0x00, 0x18, 0x00, 0x02, 0x00, 0x00, 0x00, 0x42, 0x20,
+      // (fffe,e0dd)                     length: 0
+      0xfe, 0xff, 0xdd, 0xe0, 0x00, 0x00, 0x00, 0x00,
+      // (0008,0100)                      length: 2   'A'
+      0x08, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x41, 0x20,
+    ];
+
+    const callback = (tag) => {
+      return (tag === 'x00090006') ? 'SQ' : undefined;
+    };
+    const byteStream = new ByteStream(littleEndianByteArrayParser, convertToByteArray(bytes));
+
+    // Act
+    const element = readDicomElementImplicit(byteStream, undefined, callback);
+
+    // Assert
+    expect(element.tag).to.equal('x00090006');
+    expect(element.items.length).to.equal(1);
+    expect(element.items[0].tag).to.equal('x00080018');
+
+    // Read the next element
+    const nextElement = readDicomElementImplicit(byteStream);
+    expect(nextElement.tag).to.equal('x00080100');
+  });
+
 });
