@@ -4,6 +4,7 @@ import readSequenceItemsImplicit  from './readSequenceElementImplicit.js';
 import readTag from './readTag.js';
 import findItemDelimitationItemAndSetElementLength from './findItemDelimitationItem.js';
 import readSequenceItemsExplicit from './readSequenceElementExplicit.js';
+import { readDicomElementImplicitCore } from './readDicomElementImplicit.js';
 
 /**
  * Internal helper functions for for parsing DICOM elements
@@ -22,7 +23,7 @@ const getDataLengthSizeInBytesForVR = (vr) => {
   return 2;
 };
 
-export default function readDicomElementExplicit (byteStream, warnings, untilTag) {
+export default function readDicomElementExplicit (byteStream, warnings, untilTag, vrCallback) {
   if (byteStream === undefined) {
     throw 'dicomParser.readDicomElementExplicit: missing required parameter \'byteStream\'';
   }
@@ -60,13 +61,13 @@ export default function readDicomElementExplicit (byteStream, warnings, untilTag
     return element;
   }
 
+  if (element.vr === 'UN') {
+    return readDicomElementImplicitCore(byteStream, element, vrCallback)
+  }
+
   if (element.length === 4294967295) {
     if (element.tag === 'x7fe00010') {
       findEndOfEncapsulatedElement(byteStream, element, warnings);
-
-      return element;
-    } else if (element.vr === 'UN') {
-      readSequenceItemsImplicit(byteStream, element);
 
       return element;
     }

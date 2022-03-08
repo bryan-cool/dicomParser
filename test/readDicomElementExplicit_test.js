@@ -132,7 +132,7 @@ describe('readDicomElementExplicit', () => {
   it('should parse UN element of implicit length containing an embedded sequence', () => {
     // Arrange
     const byteArray = new Uint8Array([  
-      0x01, 0x10, 0x00, 0x20, // (1001,2000)
+      0x02, 0x10, 0x00, 0x20, // (1001,2000)
       0x55, 0x4E, // UN
       0x00, 0x00, // Reserved bytes
       0xFF, 0xFF, 0xFF, 0xFF, // Undefined length
@@ -142,9 +142,7 @@ describe('readDicomElementExplicit', () => {
       0xFF, 0xFF, 0xFF, 0xFF,
 
       // Nested empty sequence
-      0x01, 0x10, 0x02, 0x20, // (1001,2002)
-      0x53, 0x51, // SQ
-      0x00, 0x00, // Reserved bytes
+      0x02, 0x10, 0x02, 0x20, // (1001,2002)
       0xFF, 0xFF, 0xFF, 0xFF, // Undefined length
       0xFE, 0xFF, 0xDD, 0xE0, // End of sequence
       0x00, 0x00, 0x00, 0x00,
@@ -163,12 +161,12 @@ describe('readDicomElementExplicit', () => {
 
     // Assert
     expect(element.dataOffset).to.equal(12);
-    expect(element.tag).to.equal('x10012000');
+    expect(element.tag).to.equal('x10022000');
     expect(element.vr).to.equal('UN');
-    expect(element.length).to.equal(44);
+    expect(element.length).to.equal(40);
     expect(element.items.length).to.equal(1);
     expect(element.items[0].tag).to.equal('xfffee000');
-    expect(element.items[0].dataSet.elements).to.have.all.keys(['x10012002']);
+    expect(element.items[0].dataSet.elements).to.have.all.keys(['x10022002', 'xfffee00d']);
   });
 
 });

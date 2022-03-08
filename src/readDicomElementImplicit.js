@@ -30,25 +30,7 @@ const isSequence = (element, byteStream, vrCallback) => {
   return false;
 };
 
-export default function readDicomElementImplicit (byteStream, untilTag, vrCallback) {
-  if (byteStream === undefined) {
-    throw 'dicomParser.readDicomElementImplicit: missing required parameter \'byteStream\'';
-  }
-
-  const element = {
-    tag: readTag(byteStream),
-    length: byteStream.readUint32(),
-    dataOffset: byteStream.position
-  };
-
-  if (element.length === 4294967295) {
-    element.hadUndefinedLength = true;
-  }
-
-  if (element.tag === untilTag) {
-    return element;
-  }
-
+function readDicomElementImplicitCore(byteStream, element, vrCallback) {
   if (isSequence(element, byteStream, vrCallback) && !isPrivateTag(element.tag)) {
     // parse the sequence
     readSequenceItemsImplicit(byteStream, element);
@@ -69,3 +51,29 @@ export default function readDicomElementImplicit (byteStream, untilTag, vrCallba
 
   return element;
 }
+
+export default function readDicomElementImplicit (byteStream, untilTag, vrCallback) {
+  if (byteStream === undefined) {
+    throw 'dicomParser.readDicomElementImplicit: missing required parameter \'byteStream\'';
+  }
+
+  const element = {
+    tag: readTag(byteStream),
+    length: byteStream.readUint32(),
+    dataOffset: byteStream.position
+  };
+
+  if (element.length === 4294967295) {
+    element.hadUndefinedLength = true;
+  }
+
+  if (element.tag === untilTag) {
+    return element;
+  }
+
+  return readDicomElementImplicitCore(byteStream, element, vrCallback);
+}
+
+export {
+  readDicomElementImplicitCore
+};
