@@ -46,22 +46,19 @@ function readSequenceItemImplicit (byteStream, vrCallback) {
 
 function readSQElementUndefinedLengthImplicit (byteStream, element, vrCallback) {
   while ((byteStream.position + 4) <= byteStream.byteArray.length) {
-    // end reading this sequence if the next tag is the sequence delimitation item
-    const nextTag = readTag(byteStream);
-
-    byteStream.seek(-4);
-
-    if (nextTag === 'xfffee0dd') {
-      // set the correct length
-      element.length = byteStream.position - element.dataOffset;
-      byteStream.seek(8);
-
-      return element;
-    }
+    const itemStart = byteStream.position;
 
     const item = readSequenceItemImplicit(byteStream, vrCallback);
 
     element.items.push(item);
+
+    // end reading this sequence if we just read the sequence delimitation item
+    if (item.tag === 'xfffee0dd') {
+      // set the correct length
+      element.length = itemStart - element.dataOffset;
+
+      return element;
+    }
   }
 
   byteStream.warnings.push('eof encountered before finding sequence delimiter in sequence of undefined length');
