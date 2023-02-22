@@ -161,6 +161,9 @@
 <script src="../../dist/dicomParser.js"></script>
 <script>window.dicomParser || document.write('<script src="https://unpkg.com/dicom-parser">\x3C/script>')</script>
 
+<!-- dicom-character-set - included to translate strings, not needed by dicomParser -->
+<script src="https://unpkg.com/dicom-character-set"></script>
+
 <!-- jquery - included to make things easier to demo, not needed by dicomParser -->
 <script src="../jquery.min.js"></script>
 
@@ -360,7 +363,7 @@ function navigateToTopElement(element, forceValue) {
 
 // This function iterates through dataSet recursively and adds new HTML strings
 // to the output array passed into it
-function dumpDataSet(dataSet, output)
+function dumpDataSet(dataSet, output, specificCharacterSet)
 {
     function getTag(tag)
     {
@@ -485,7 +488,7 @@ function dumpDataSet(dataSet, output)
                     output.push('<a href="#" onclick="navigateToTopElement(this); return false;">(top)</a>');
 
                     output.push('<ul class="nested active">');
-                    dumpDataSet(item.dataSet, output);
+                    dumpDataSet(item.dataSet, output, specificCharacterSet);
                     output.push('</ul>');
                     output.push('</li>');
                 });
@@ -625,10 +628,10 @@ function dumpDataSet(dataSet, output)
                             // Next we ask the dataset to give us the element's data in string form.  Most elements are
                             // strings but some aren't so we do a quick check to make sure it actually has all ascii
                             // characters so we know it is reasonable to display it.
-                            var str = dataSet.string(propertyName);
-                            var stringIsAscii = isASCII(str);
+                            try {
+                                const elementBytes = new Uint8Array(dataSet.byteArray.buffer, element.dataOffset, element.length);
+                                const str = window['dicom-character-set'].convertBytes(specificCharacterSet, elementBytes, {vr});
 
-                            if (stringIsAscii) {
                                 // the string will be undefined if the element is present but has no data
                                 // (i.e. attribute is of type 2 or 3 ) so we only display the string if it has
                                 // data.  Note that the length of the element will be 0 to indicate "no data"
@@ -637,10 +640,24 @@ function dumpDataSet(dataSet, output)
                                     text += '"' + escapeSpecialCharacters(str) + '"' + mapUid(str);
                                 }
                             }
-                            else {
-                                if (element.length !== 2 && element.length !== 4) {
-                                    // If it is some other length and we have no string
-                                    text += '<i style="color: #C8C8C8">binary data</i>';
+                            catch {
+                                const str = dataSet.string(propertyName);
+                                const stringIsAscii = isASCII(str);
+
+                                if (stringIsAscii) {
+                                    // the string will be undefined if the element is present but has no data
+                                    // (i.e. attribute is of type 2 or 3 ) so we only display the string if it has
+                                    // data.  Note that the length of the element will be 0 to indicate "no data"
+                                    // so we don't put anything here for the value in that case.
+                                    if (str !== undefined) {
+                                        text += '"' + escapeSpecialCharacters(str) + '"' + mapUid(str);
+                                    }
+                                }
+                                else {
+                                    if (element.length !== 2 && element.length !== 4) {
+                                        // If it is some other length and we have no string
+                                        text += '<i style="color: #C8C8C8">binary data</i>';
+                                    }
                                 }
                             }
                         }
@@ -801,10 +818,11 @@ function dumpFile()
                 if(console) {
                     console.log(dataSet);
                 }
+                var specificCharacterSet = dataSet.string('x00080005');
                 // Here we call dumpDataSet to recursively iterate through the DataSet and create an array
                 // of strings of the contents.
                 var output = [];
-                dumpDataSet(dataSet, output);
+                dumpDataSet(dataSet, output, specificCharacterSet);
                 // Combine the array of strings into one string and add it to the DOM
                 document.getElementById('dropZone').innerHTML = '<ul>' + output.join('') + '</ul>';
 
