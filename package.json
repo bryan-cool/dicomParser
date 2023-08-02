@@ -4,6 +4,7 @@
   "description": "Javascript parser for DICOM Part 10 data",
   "main": "dist/dicomParser.min.js",
   "module": "dist/dicomParser.min.js",
+  "type": "module",
   "browser": {
     "zlib": false
   },
@@ -41,6 +42,7 @@
     "test:all": "npm run test:chrome && npm run test:firefox",
     "test:chrome": "karma start config/karma/karma-chrome.js",
     "test:firefox": "karma start config/karma/karma-firefox.js",
+    "test:node": "mocha",
     "test:watch": "karma start config/karma/karma-watch.js",
     "version": "node -p -e \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.js",
     "watch": "npm run webpack:watch",

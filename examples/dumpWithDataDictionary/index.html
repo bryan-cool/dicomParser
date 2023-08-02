@@ -147,6 +147,7 @@ var showGroupElement = false;
 var showFragments = false;
 var showFrames = false;
 var showSHA1 = false;
+var showSHA1 = false;
 var file = undefined;
 var sha1Hash = "";
 var rusha = new Rusha();
@@ -584,6 +585,7 @@ function updateFilter() {
     showFragments = $('#fragments').prop('checked');
     showFrames = $('#frames').prop('checked');
     showSHA1 = $('#sha1').prop('checked');
+    logToConsole = $('#console').prop('checked');
 
     dumpFile();
 }
@@ -607,7 +609,7 @@ function dumpFile()
         return;
     }
     // clear any data currently being displayed as we parse this next file
-    document.getElementById('dropZone').innerHTML = '';
+    $(document.getElementById('dropZone')).empty();
     $('#status').removeClass('alert-warning alert-success alert-danger').addClass('alert-info');
     $('#warnings').empty();
     document.getElementById('statusText').innerHTML = 'Status: Loading file, please wait..';
@@ -617,11 +619,13 @@ function dumpFile()
         var arrayBuffer = reader.result;
         // Here we have the file data as an ArrayBuffer.  dicomParser requires as input a
         // Uint8Array so we create that here
-        var byteArray = new Uint8Array(arrayBuffer);
+        var byteArray = new Uint8Array(arrayBuffer);       
         var kb = byteArray.length / 1024;
         var mb = kb / 1024;
         var byteStr = mb > 1 ? mb.toFixed(3) + " MB" : kb.toFixed(0) + " KB";
+
         document.getElementById('statusText').innerHTML = 'Status: Parsing ' + byteStr + ' bytes, please wait..';
+
         // set a short timeout to do the parse so the DOM has time to update itself with the above message
         setTimeout(function() {
             var sha1Hash = sha1(byteArray, 0, byteArray.length);
@@ -638,14 +642,17 @@ function dumpFile()
                 };
 
                 dataSet = dicomParser.parseDicom(byteArray, options);
+
                 // dump dataSet to console to aid debugging.
                 if(console) {
+                    // Holds on to memory
                     console.log(dataSet);
                 }
                 // Here we call dumpDataSet to recursively iterate through the DataSet and create an array
                 // of strings of the contents.
                 var output = [];
                 dumpDataSet(dataSet, output);
+
                 // Combine the array of strings into one string and add it to the DOM
                 document.getElementById('dropZone').innerHTML = '<ul>' + output.join('') + '</ul>';
 
@@ -702,6 +709,7 @@ function dumpFile()
                     ev.stopPropagation();
                 });
 
+
                 var end = new Date().getTime();
                 var time = end - start;
                 var statusText = 'Status:';
@@ -727,6 +735,7 @@ function dumpFile()
                         statusText += 'Ready - no pixel data found';
                     }
                 }
+
                 statusText += '; file size ' + byteStr;
                 statusText += '; parse time ' + time + 'ms';
                 statusText += '; SHA1 = ' + sha1Hash;
@@ -735,7 +744,6 @@ function dumpFile()
                 statusText += '; ' + uids[(dataSet.string('x00020010'))];
 
                 $('#statusText').html(statusText);
-
             }
             catch(err)
             {
@@ -756,8 +764,8 @@ function dumpFile()
                 }
             }
         },10);
-    };
 
+    };
     reader.readAsArrayBuffer(file);
 }
 

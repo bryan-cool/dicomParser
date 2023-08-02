@@ -157,16 +157,17 @@ export default function parseDicom(byteArray, options = {}) {
 
   // main function here
   function parseTheByteStream() {
-    const metaHeaderDataSet = readPart10Header(byteArray, options);
-
+    let metaHeaderDataSet;
     try {
+      metaHeaderDataSet = readPart10Header(byteArray, options);
       const dataSet = readDataSet(metaHeaderDataSet);
+
       return mergeDataSets(metaHeaderDataSet, dataSet);
     } catch (e) {
       // If an exception is thrown when parsing main dataset (i.e. truncated
       // byte array), go ahead and include everything parsed so far in the exception.
-      if (e.dataSet) {
-        e.dataSet = mergeDataSets(metaHeaderDataSet, e.dataSet);
+      if (metaHeaderDataSet) {
+        e.dataSet = e.dataSet ? mergeDataSets(metaHeaderDataSet, e.dataSet) : metaHeaderDataSet;
       }
       throw e;
     }

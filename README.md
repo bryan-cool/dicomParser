@@ -52,7 +52,7 @@ var byteArray = new Uint8Array(arrayBuffer);
 
 try
 {
-    // Allow raw files
+    // If file doesn't contain the preamble, use this as the transfer syntax when parsing as raw
     const options = { TransferSyntaxUID: '1.2.840.10008.1.2' };
     // Parse the byte array to get a DataSet object that has the parsed contents
     var dataSet = dicomParser.parseDicom(byteArray, options);
@@ -89,7 +89,7 @@ Options
 ```dicomParser.parseDicom``` accepts an optional second argument that is an options object. The accepted properties are:
 
 #### TransferSyntaxUID
-A string value used as the default transfer syntax uid for parsing raw DICOM (not encapsualted in Part 10).
+A string value used as the default transfer syntax uid for parsing raw DICOM (not encapsulated in Part 10).
 For raw DICOM files, this value should be the LEI UID value.
 
 #### untilTag

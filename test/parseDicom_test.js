@@ -73,7 +73,7 @@ describe('parseDicom', () => {
       // x00020000          UL         4
       0x02,0x00,0x00,0x00, 0x55,0x4C, 0x04,0x00, 0x9F,0x00,0x00,0x00,
       // File Meta Information Version
-      // x00020001          OB        (reserved)  2                     01
+      // x00020001          OB        (reserved)  2                     256
       0x02,0x00,0x01,0x00, 0x4F,0x42, 0x00,0x00, 0x02,0x00,0x00,0x00, 0x00,0x01,
       // Media Storage SOP Class UID
       // x00020002          UI         26         1.2.840.10008.5.1.4.1.1.2 (CT)
@@ -115,7 +115,7 @@ describe('parseDicom', () => {
       // x00020000          UL         4
       0x02,0x00,0x00,0x00, 0x55,0x4C, 0x04,0x00, 0x9D,0x00,0x00,0x00,
       // File Meta Information Version
-      // x00020001          OB        (reserved)   2                    01
+      // x00020001          OB        (reserved)   2                    256
       0x02,0x00,0x01,0x00, 0x4F,0x42, 0x00,0x00, 0x02,0x00,0x00,0x00, 0x00,0x01,
       // Media Storage SOP Class UID
       // x00020002          UI         26         1.2.840.10008.5.1.4.1.1.2 (CT)
@@ -194,6 +194,8 @@ describe('parseDicom', () => {
     expect(dataSet.string('x00201041')).to.equal('-43');
   });
 
+  // TODO: Add another version of this that's longer than 132 bytes to make sure the
+  // other branch gets hit
   it('should parse the dataset correctly (raw LEE)', () => {
     // Arrange
     const byteArray = makeRawData();
@@ -220,21 +222,47 @@ describe('parseDicom', () => {
     expect(dataSet.string('x00201041')).to.equal('-43');
   });
 
-  it('should parse a truncated byte array and return all parsed elements in the exception (explicitLittleEndian)', () => {
+
+  it('should parse a truncated byte array and return all parsed elements in the exception, including a partial metaheader (explicitLittleEndian)', () => {
+    // Arrange
+    const byteArray = makeExplicitLittleEndianTestData();
+    const dataSet = parseDicom(byteArray);
+    // Truncate at the version
+    const partialByteArray = byteArray.slice(0, dataSet.elements['x00020001'].dataOffset - 1);
+
+    // Act
+    let didNotThrow = false;
+    try {
+      parseDicom(partialByteArray);
+      didNotThrow = true;
+    } catch (err) {
+      // Assert
+      expect(err.dataSet.uint32('x00020000')).to.equal(159);
+      expect(Object.keys(err.dataSet.elements).length).to.equal(1);
+    }
+
+    expect(didNotThrow).to.be.false; 
+  });
+
+  it('should parse a truncated byte array and return all parsed elements in the exception, including a partial dataset (explicitLittleEndian)', () => {
     // Arrange
     const byteArray = makeExplicitLittleEndianTestData();
     // Truncate between x00201041 and x00280010
-    const partialByteArray = byteArray.slice(0, 320)
+    const partialByteArray = byteArray.slice(0, byteArray.length - 3);
 
     // Act
+    let didNotThrow = false;
     try {
-      const dataSet = parseDicom(partialByteArray);
+      parseDicom(partialByteArray);
+      didNotThrow = true;
     } catch (err) {
       // Assert
       assertMetaHeaderElements(err.dataSet, '1.2.840.10008.1.2.1', 159);
       expect(err.dataSet.string('x00020010')).to.equal('1.2.840.10008.1.2.1')
       expect(err.dataSet.string('x00201041')).to.equal('-43');
-      // expect(err.dataSet.uint16('x00280010')).to.equal(512);
+      expect(err.dataSet.elements['x00280010']).to.equal(undefined);
     }
+
+    expect(didNotThrow).to.be.false;
   });
 });
