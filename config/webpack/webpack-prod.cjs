@@ -1,6 +1,6 @@
 const merge = require('./merge.cjs');
 const baseConfig = require('./webpack-base.cjs');
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 const devConfig = {
   output: {
@@ -9,8 +9,8 @@ const devConfig = {
   mode: "production",
   optimization: {
     minimizer: [
-      new UglifyJSPlugin({
-        sourceMap: true
+      new TerserPlugin({
+        extractComments: false,
       })
     ]
   },
