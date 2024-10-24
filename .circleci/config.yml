@@ -2,6 +2,7 @@ version: 2.1
 
 orbs:
   browser-tools: circleci/browser-tools@1.4.6
+  coveralls: coveralls/coveralls@2.2.4
 
 defaults: &defaults
   working_directory: ~/repo
@@ -27,6 +28,9 @@ jobs:
             - ~/.cache/puppeteer
           key: v1-dependencies-{{ checksum "package-lock.json" }}
       - run: npm run test
+      - coveralls/upload:
+          flag_name: "Tests"
+          verbose: true
 
   # Publish latest
   deploy:
